@@ -77,7 +77,10 @@ const (
 	KeyWhere  = "where"
 	Space     = " "
 
-	MakrComma = ","
+	MakrComma      = ","
+	MarkDot        = "."
+	MarkLeftParen  = "("
+	MarkRightParen = ")"
 )
 
 var (

@@ -3,7 +3,6 @@ package sql
 import (
 	"fmt"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 )
 
@@ -58,6 +57,33 @@ func (l *lexer) peek() rune {
 func (l *lexer) ignore() {
 	l.start = l.pos
 }
+
+func (l *lexer) nextTerm() string {
+	l.skipSpace()
+	l.acceptRun(letter)
+	l.width = l.pos - l.start
+	return l.input[l.start:l.pos]
+}
+func (l *lexer) nextTermWithDot() (string, bool) {
+	l.skipSpace()
+	l.acceptRun(letter)
+	for l.accept(MarkDot) {
+		if sub := l.nextTerm(); sub == "" {
+			return l.input[l.start:l.pos], false
+		}
+	}
+	l.width = l.pos - l.start
+	return l.input[l.start:l.pos], true
+}
+func (l *lexer) backupTerm() {
+	l.pos -= l.width
+}
+func (l *lexer) peekTerm() string {
+	s := l.nextTerm()
+	l.backupTerm()
+	return s
+}
+
 func (l *lexer) errorf(format string, args ...interface{}) stateFunc {
 	l.items <- item{
 		itemError,
@@ -92,65 +118,78 @@ func (l *lexer) acceptRun(valid string) {
 }
 func lexStart(l *lexer) stateFunc {
 	l.skipSpace()
-	if strings.HasPrefix(l.input[l.pos:], KeySelect) {
-		l.pos += len(KeySelect)
+	if l.nextTerm() == KeySelect {
 		l.emit(itemSelect)
-		if !l.skipSpace() {
-			return l.errorf("syntax error: start with %q", l.input[l.pos])
-		}
 		return lexField
 	}
+	l.backupTerm()
 	return l.errorf("syntax error: start with %q", l.input[l.pos])
 }
 
 func lexField(l *lexer) stateFunc {
 	l.skipSpace()
-
 	for {
-		if r := l.next(); unicode.IsLetter(r) {
-			l.acceptRun(letter)
-			if l.accept(".") {
-				if !unicode.IsLetter(l.peek()) {
-					return l.errorf("syntax error: query field %q end with '.'", l.input[l.pos:])
+		if s, ok := l.nextTermWithDot(); s != "" && ok {
+			if agg, ok := Aggragation[s]; ok {
+				l.emit(agg)
+				if !l.accept(MarkLeftParen) {
+					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
 				}
-				l.acceptRun(letter)
-			}
-			l.emit(itemIdentifier)
-			l.skipSpace()
-			if !l.accept(MakrComma) {
-				break
+				l.emit(itemLeftParen)
+				if aggField, ok := l.nextTermWithDot(); aggField != "" && ok {
+					l.emit(itemIdentifier)
+					if !l.accept(MarkRightParen) {
+						return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+					}
+					l.emit(itemRightParen)
+				} else {
+					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+				}
 			} else {
-				l.emit(itemComma)
+				l.emit(itemIdentifier)
 				l.skipSpace()
+				if !l.accept(MakrComma) {
+					break
+				} else {
+					l.emit(itemComma)
+				}
 			}
 		} else {
 			return l.errorf("syntax error: query field %q not valid", l.input[l.pos:])
 		}
 	}
-	if strings.HasPrefix(l.input[l.pos:], KeyFrom) {
-		l.pos += len(KeyFrom)
-		if l.accept(Space) {
-			l.backup()
-			l.emit(itemFrom)
-			return lexFrom
-		} else {
-			l.pos -= len(KeyFrom)
-		}
-
+	if l.peekTerm() == KeyFrom {
+		return lexFrom
 	}
-	if strings.HasPrefix(l.input[l.pos:], KeyWhere) {
-		l.pos += len(KeyWhere)
-		if l.accept(Space) {
-			l.backup()
-			l.emit(itemWhere)
-			return lexCondition
-		} else {
-			l.pos -= len(KeyWhere)
-		}
-
+	if l.peekTerm() == KeyWhere {
+		return lexWhere
 	}
+	return nil
 }
 
 func lexFrom(l *lexer) stateFunc {
+	l.nextTerm()
+	l.emit(itemFrom)
+	if table := l.nextTerm(); table != "" {
+		l.emit(itemIdentifier)
+		if l.peekTerm() == KeyWhere {
+			return lexWhere
+		} else if l.peek() == eof {
+			return nil
+		} else {
+			return l.errorf("syntax error: %q", l.input[l.start:l.pos])
+		}
+	} else {
+		return l.errorf("syntax error: table name %q not valid", l.input[l.start:l.pos])
+	}
+}
 
+func lexWhere(l *lexer) stateFunc {
+	l.nextTerm()
+	l.emit(itemWhere)
+	return lexLeftSide
+}
+
+func lexLeftSide(l *lexer) stateFunc {
+	return nil
 }
