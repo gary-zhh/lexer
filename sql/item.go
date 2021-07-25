@@ -14,7 +14,7 @@ const (
 	itemChar                         // printable ASCII character; grab bag for comma etc.
 	itemCharConstant                 // character constant
 	itemNumber                       // simple number, including imaginary
-	itemIdentifier                   // alphanumeric identifier not starting with '.'
+	itemIdentifier                   // alphanumeric identifier
 
 	itemEqual        // "="
 	itemGreater      // ">"
@@ -76,6 +76,8 @@ const (
 	KeyFrom   = "from"
 	KeyWhere  = "where"
 	Space     = " "
+
+	MakrComma = ","
 )
 
 var (
@@ -87,5 +89,6 @@ var (
 		"average":  itemAverage,
 		"distinct": itemDistinct,
 	}
+
 	letter = "abcdefghijklmnopqrstuvwxyz"
 )

@@ -104,17 +104,10 @@ func lexStart(l *lexer) stateFunc {
 }
 
 func lexField(l *lexer) stateFunc {
-	if strings.HasPrefix(l.input[l.pos:], KeyFrom) {
-		l.emit(itemFrom)
-		return lexFrom
-	}
-	if strings.HasPrefix(l.input[l.pos:], KeyWhere) {
-		l.emit(itemWhere)
-		return lexCondition
-	}
+	l.skipSpace()
+
 	for {
-		switch r := l.next(); {
-		case unicode.IsLetter(r):
+		if r := l.next(); unicode.IsLetter(r) {
 			l.acceptRun(letter)
 			if l.accept(".") {
 				if !unicode.IsLetter(l.peek()) {
@@ -122,10 +115,39 @@ func lexField(l *lexer) stateFunc {
 				}
 				l.acceptRun(letter)
 			}
-		default:
-			l.backup()
-
+			l.emit(itemIdentifier)
+			l.skipSpace()
+			if !l.accept(MakrComma) {
+				break
+			} else {
+				l.emit(itemComma)
+				l.skipSpace()
+			}
+		} else {
+			return l.errorf("syntax error: query field %q not valid", l.input[l.pos:])
 		}
+	}
+	if strings.HasPrefix(l.input[l.pos:], KeyFrom) {
+		l.pos += len(KeyFrom)
+		if l.accept(Space) {
+			l.backup()
+			l.emit(itemFrom)
+			return lexFrom
+		} else {
+			l.pos -= len(KeyFrom)
+		}
+
+	}
+	if strings.HasPrefix(l.input[l.pos:], KeyWhere) {
+		l.pos += len(KeyWhere)
+		if l.accept(Space) {
+			l.backup()
+			l.emit(itemWhere)
+			return lexCondition
+		} else {
+			l.pos -= len(KeyWhere)
+		}
+
 	}
 }
 
