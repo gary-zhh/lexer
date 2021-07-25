@@ -19,11 +19,13 @@ const (
 	itemEOF
 	itemField      // alphanumeric identifier starting with '.'
 	itemIdentifier // alphanumeric identifier not starting with '.'
+	itemLeftMeta   // {{
 	itemLeftDelim  // left action delimiter
 	itemLeftParen  // '(' inside action
 	itemNumber     // simple number, including imaginary
 	itemPipe       // pipe symbol
 	itemRawString  // raw quoted string (includes quotes)
+	itemRightMeta  // }}
 	itemRightDelim // right action delimiter
 	itemRightParen // ')' inside action
 	itemSpace      // run of spaces separating arguments
