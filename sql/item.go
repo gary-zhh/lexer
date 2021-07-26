@@ -23,8 +23,6 @@ const (
 	itemLessEqual    // "<="
 	itemNotEqual1    // "!="
 	itemNotEqual2    // "<>"
-	itemAndChar      // &&
-	itemOrChar       // or
 	itemEOF
 
 	itemComma      // ,
@@ -46,8 +44,9 @@ const (
 	itemAsc
 	itemDesc
 	itemLike
-	itemAnd
-	itemOr
+	itemAnd // and
+	itemOr  // or
+	itemNot // not
 	itemCount
 	itemAverage
 	itemMax
@@ -71,11 +70,20 @@ func (i item) String() string {
 }
 
 const (
-	eof       = -1
-	KeySelect = "select"
-	KeyFrom   = "from"
-	KeyWhere  = "where"
-	Space     = " "
+	eof         = -1
+	KeySelect   = "select"
+	KeyFrom     = "from"
+	KeyWhere    = "where"
+	KeyNot      = "not"
+	KeyAnd      = "and"
+	KeyOr       = "or"
+	KeyCount    = "count"
+	KeyMax      = "max"
+	KeyMin      = "min"
+	KeySum      = "sum"
+	KeyAverage  = "average"
+	KeyDistinct = "distinct"
+	Space       = " "
 
 	MakrComma      = ","
 	MarkDot        = "."
@@ -85,13 +93,17 @@ const (
 
 var (
 	Aggragation = map[string]itemType{
-		"count":    itemCount,
-		"max":      itemMax,
-		"min":      itemMin,
-		"sum":      itemSum,
-		"average":  itemAverage,
-		"distinct": itemDistinct,
+		KeyCount:    itemCount,
+		KeyMax:      itemMax,
+		KeyMin:      itemMin,
+		KeySum:      itemSum,
+		KeyAverage:  itemAverage,
+		KeyDistinct: itemDistinct,
 	}
-
+	LogicOperator = map[string]itemType{
+		KeyAnd: itemAnd,
+		KeyOr:  itemOr,
+		KeyNot: itemNot,
+	}
 	letter = "abcdefghijklmnopqrstuvwxyz"
 )

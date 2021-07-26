@@ -7,12 +7,13 @@ import (
 )
 
 type lexer struct {
-	name  string
-	input string    // the string being scanned
-	start int       // start position of this item
-	pos   int       // current position in the input
-	width int       // width of last rune read
-	items chan item // channel of scanned items
+	name       string
+	input      string // the string being scanned
+	start      int    // start position of this item
+	pos        int    // current position in the input
+	width      int    // width of last rune read
+	parenDepth int
+	items      chan item // channel of scanned items
 }
 type stateFunc func(*lexer) stateFunc
 
@@ -132,12 +133,14 @@ func lexField(l *lexer) stateFunc {
 		if s, ok := l.nextTermWithDot(); s != "" && ok {
 			if agg, ok := Aggragation[s]; ok {
 				l.emit(agg)
+				l.skipSpace()
 				if !l.accept(MarkLeftParen) {
 					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
 				}
 				l.emit(itemLeftParen)
 				if aggField, ok := l.nextTermWithDot(); aggField != "" && ok {
 					l.emit(itemIdentifier)
+					l.skipSpace()
 					if !l.accept(MarkRightParen) {
 						return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
 					}
@@ -187,9 +190,29 @@ func lexFrom(l *lexer) stateFunc {
 func lexWhere(l *lexer) stateFunc {
 	l.nextTerm()
 	l.emit(itemWhere)
-	return lexLeftSide
+	return lexCondition
 }
 
-func lexLeftSide(l *lexer) stateFunc {
-	return nil
+func lexCondition(l *lexer) stateFunc {
+	l.skipSpace()
+	switch r := l.next(); r {
+	case '(':
+		l.emit(itemLeftParen)
+		l.parenDepth++
+	case ')':
+		l.emit(itemRightParen)
+		l.parenDepth--
+		if l.parenDepth < 0 {
+			return l.errorf("unexpected right paren")
+		}
+	default:
+		l.backup()
+		term := l.nextTerm()
+		if term == KeyNot {
+			l.emit(itemNot)
+			return lexCondition
+		}
+
+	}
+	return lexLeftHandSide
 }
