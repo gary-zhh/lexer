@@ -195,11 +195,11 @@ func lexWhere(l *lexer) stateFunc {
 
 func lexCondition(l *lexer) stateFunc {
 	l.skipSpace()
-	switch r := l.next(); r {
-	case '(':
+	switch r := l.next(); {
+	case r == '(':
 		l.emit(itemLeftParen)
 		l.parenDepth++
-	case ')':
+	case r == ')':
 		l.emit(itemRightParen)
 		l.parenDepth--
 		if l.parenDepth < 0 {
@@ -215,4 +215,42 @@ func lexCondition(l *lexer) stateFunc {
 
 	}
 	return lexLeftHandSide
+}
+func lexLeftHandSide(l *lexer) stateFunc {
+	l.skipSpace()
+	switch r := l.next(); {
+	case r == '"':
+		for n := l.next(); n != '"'; {
+			if n == eof {
+				l.errorf("upclosed string")
+			}
+		}
+		l.emit(itemString)
+	case r == '+' || r == '-' || '0' <= r && r <= '9':
+		curDigits := digits
+		l.backup()
+		l.accept("+-")
+
+		if l.accept("0") && l.accept("xX") {
+			curDigits += "abcdefABCDEF"
+		}
+
+		l.acceptRun(curDigits)
+		if l.accept(".") {
+			l.acceptRun(curDigits)
+		}
+
+		if l.accept("eE") {
+			l.accept("+-")
+			l.acceptRun(digits)
+		}
+		l.emit(itemNumber)
+	default:
+		return l.errorf("syntax error: condition")
+	}
+	return lexCompare
+}
+
+func lexCompare(l *lexer) stateFunc {
+	return nil
 }

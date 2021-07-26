@@ -106,4 +106,5 @@ var (
 		KeyNot: itemNot,
 	}
 	letter = "abcdefghijklmnopqrstuvwxyz"
+	digits = "0123456789"
 )
