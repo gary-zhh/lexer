@@ -146,6 +146,12 @@ func lexField(l *lexer) stateFunc {
 						return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
 					}
 					l.emit(itemRightParen)
+					l.skipSpace()
+					if !l.accept(MakrComma) {
+						break
+					} else {
+						l.emit(itemComma)
+					}
 				} else {
 					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
 				}

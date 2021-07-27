@@ -45,3 +45,36 @@ func Test_LexStart(t *testing.T) {
 		}
 	}
 }
+
+var lexFieldTest = []lexTest{
+	{
+		"name, ", []item{{itemIdentifier, "name"}, {itemError, ""}},
+	},
+	{
+		"name, age", []item{{itemIdentifier, "name"}, {itemError, ""}},
+	},
+	{
+		"  name, count()", []item{{itemIdentifier, "name"}, {itemError, ""}},
+	},
+	{
+		"  name  , sum(age)  ", []item{{itemIdentifier, "name"}, {itemError, ""}},
+	},
+}
+
+func Test_LexField(t *testing.T) {
+	for _, i := range lexFieldTest {
+		l := &lexer{
+			input: i.input,
+			items: make(chan item),
+		}
+		go func() {
+			for state := lexField; state != nil; {
+				state = state(l)
+			}
+			close(l.items)
+		}()
+		for it := range l.items {
+			fmt.Println(it)
+		}
+	}
+}
