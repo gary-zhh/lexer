@@ -38,7 +38,7 @@ func (l *lexer) emit(t itemType) {
 	l.start = l.pos
 }
 func (l *lexer) next() (r rune) {
-	if l.pos > len(l.input) {
+	if l.pos >= len(l.input) {
 		l.width = 0
 		return eof
 	}
@@ -128,6 +128,7 @@ func lexStart(l *lexer) stateFunc {
 	return l.errorf("syntax error: start with %q", l.input[l.pos])
 }
 
+// TODO: rewrite this function and add " as xxx "/ "as "xxx" "
 func lexField(l *lexer) stateFunc {
 	l.skipSpace()
 	for {
@@ -158,6 +159,9 @@ func lexField(l *lexer) stateFunc {
 			} else {
 				l.emit(itemIdentifier)
 				l.skipSpace()
+				// if n := l.nextTerm(); n == KeyAs {
+				//
+				// }
 				if !l.accept(MakrComma) {
 					break
 				} else {
@@ -218,6 +222,8 @@ func lexCondition(l *lexer) stateFunc {
 		if term == KeyNot {
 			l.emit(itemNot)
 			return lexCondition
+		} else {
+			l.backupTerm()
 		}
 	}
 	return lexLeftHandSide
@@ -305,6 +311,7 @@ func lexRightHandSide(l *lexer) stateFunc {
 			if n == eof {
 				l.errorf("upclosed string")
 			}
+			n = l.next()
 		}
 		l.emit(itemString)
 	case r == '+' || r == '-' || '0' <= r && r <= '9':
@@ -373,6 +380,8 @@ func lexLogic(l *lexer) stateFunc {
 		} else {
 			return l.errorf("syntax error: ")
 		}
+	case r == eof:
+		return nil
 	}
 	return lexCondition
 }

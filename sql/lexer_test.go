@@ -78,3 +78,19 @@ func Test_LexField(t *testing.T) {
 		}
 	}
 }
+
+func Test_LexCondition(t *testing.T) {
+	l := &lexer{
+		input: ``,
+		items: make(chan item),
+	}
+	go func() {
+		for state := lexCondition; state != nil; {
+			state = state(l)
+		}
+		close(l.items)
+	}()
+	for it := range l.items {
+		fmt.Println(it)
+	}
+}

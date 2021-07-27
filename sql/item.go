@@ -72,6 +72,7 @@ func (i item) String() string {
 const (
 	eof         = -1
 	KeySelect   = "select"
+	KeyAs       = "as"
 	KeyFrom     = "from"
 	KeyWhere    = "where"
 	KeyNot      = "not"
