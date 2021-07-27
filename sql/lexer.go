@@ -3,6 +3,7 @@ package sql
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -212,7 +213,6 @@ func lexCondition(l *lexer) stateFunc {
 			l.emit(itemNot)
 			return lexCondition
 		}
-
 	}
 	return lexLeftHandSide
 }
@@ -245,6 +245,10 @@ func lexLeftHandSide(l *lexer) stateFunc {
 			l.acceptRun(digits)
 		}
 		l.emit(itemNumber)
+	case unicode.IsLetter(r):
+		l.backup()
+		l.nextTermWithDot()
+		l.emit(itemIdentifier)
 	default:
 		return l.errorf("syntax error: condition")
 	}
@@ -252,5 +256,125 @@ func lexLeftHandSide(l *lexer) stateFunc {
 }
 
 func lexCompare(l *lexer) stateFunc {
+	l.skipSpace()
+	switch r := l.next(); {
+	case r == '>':
+		if l.accept("=") {
+			l.emit(itemGreaterEqual)
+		} else {
+			l.emit(itemGreater)
+		}
+	case r == '<':
+		if l.accept("=") {
+			l.emit(itemLessEqual)
+		} else {
+			l.emit(itemLess)
+		}
+	case r == '!':
+		if l.accept("=") {
+			l.emit(itemNotEqual)
+		} else {
+			return l.errorf("syntax error: ")
+		}
+	case r == '=':
+		l.emit(itemEqual)
+	case r == 'l':
+		l.backup()
+		if n := l.nextTerm(); n == KeyLike {
+			l.emit(itemLike)
+		} else {
+			return l.errorf("syntax error: ")
+		}
+	default:
+		return l.errorf("syntax error: ")
+	}
+	return lexRightHandSide
+}
+
+func lexRightHandSide(l *lexer) stateFunc {
+	l.skipSpace()
+	switch r := l.next(); {
+	case r == '"':
+		for n := l.next(); n != '"'; {
+			if n == eof {
+				l.errorf("upclosed string")
+			}
+		}
+		l.emit(itemString)
+	case r == '+' || r == '-' || '0' <= r && r <= '9':
+		curDigits := digits
+		l.backup()
+		l.accept("+-")
+
+		if l.accept("0") && l.accept("xX") {
+			curDigits += "abcdefABCDEF"
+		}
+
+		l.acceptRun(curDigits)
+		if l.accept(".") {
+			l.acceptRun(curDigits)
+		}
+
+		if l.accept("eE") {
+			l.accept("+-")
+			l.acceptRun(digits)
+		}
+		l.emit(itemNumber)
+	case unicode.IsLetter(r):
+		l.backup()
+		l.nextTermWithDot()
+		l.emit(itemIdentifier)
+	default:
+		return l.errorf("syntax error: condition")
+	}
+	return lexLogic
+}
+
+func lexLogic(l *lexer) stateFunc {
+	l.skipSpace()
+	for l.accept(")") {
+		l.emit(itemRightParen)
+		l.parenDepth--
+		if l.parenDepth < 0 {
+			return l.errorf("unexpected right paren")
+		}
+		l.skipSpace()
+	}
+	l.skipSpace()
+	switch r := l.next(); {
+	case r == 'a':
+		l.backup()
+		if n := l.nextTerm(); n != KeyAnd {
+			return l.errorf("syntax error: ")
+		}
+		l.emit(itemAnd)
+	case r == 'o':
+		l.backup()
+		n := l.nextTerm()
+		if n == KeyOr {
+			l.emit(itemOr)
+		} else if n+l.nextTerm() == KeyOrderBy {
+			return lexOrderBy
+		} else {
+			return l.errorf("syntax error: ")
+		}
+
+	case r == 'g':
+		l.backup()
+		// TODO : pos not correct
+		if l.nextTerm()+l.nextTerm() == KeyGroupBy {
+			return lexGroupBy
+		} else {
+			return l.errorf("syntax error: ")
+		}
+	}
+	return lexCondition
+}
+
+func lexGroupBy(l *lexer) stateFunc {
+	return nil
+}
+
+func lexOrderBy(l *lexer) stateFunc {
 	return nil
 }

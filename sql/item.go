@@ -21,8 +21,8 @@ const (
 	itemGreaterEqual // ">="
 	itemLess         // "<"
 	itemLessEqual    // "<="
-	itemNotEqual1    // "!="
-	itemNotEqual2    // "<>"
+	itemNotEqual     // "!="
+	//itemNotEqual2    // "<>"
 	itemEOF
 
 	itemComma      // ,
@@ -83,6 +83,9 @@ const (
 	KeySum      = "sum"
 	KeyAverage  = "average"
 	KeyDistinct = "distinct"
+	KeyLike     = "like"
+	KeyGroupBy  = "groupby"
+	KeyOrderBy  = "orderby"
 	Space       = " "
 
 	MakrComma      = ","
