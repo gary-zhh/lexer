@@ -87,6 +87,9 @@ const (
 	KeyLike     = "like"
 	KeyGroupBy  = "groupby"
 	KeyOrderBy  = "orderby"
+	KeyDesc     = "desc"
+	KeyAsc      = "asc"
+	KeyLimit    = "limit"
 	Space       = " "
 
 	MakrComma      = ","
