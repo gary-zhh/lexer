@@ -129,6 +129,7 @@ func lexStart(l *lexer) stateFunc {
 }
 
 // TODO: rewrite this function and add " as xxx "/ "as "xxx" "
+// TODO: add "*" to indicating get all the fields
 func lexField(l *lexer) stateFunc {
 	l.skipSpace()
 	for {
