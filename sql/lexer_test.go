@@ -94,3 +94,10 @@ func Test_LexCondition(t *testing.T) {
 		fmt.Println(it)
 	}
 }
+
+func Test_All(t *testing.T) {
+	l := lex("all", `select age, count(name) where (id= "1" and not(region = "cn-beijing")) group by region order by age`)
+	for it := range l.items {
+		fmt.Println(it)
+	}
+}

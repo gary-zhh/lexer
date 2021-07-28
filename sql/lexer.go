@@ -366,8 +366,16 @@ func lexLogic(l *lexer) stateFunc {
 		n := l.nextTerm()
 		if n == KeyOr {
 			l.emit(itemOr)
-		} else if n+l.nextTerm() == KeyOrderBy {
-			return lexOrderBy
+		} else if n == "order" {
+			if l.parenDepth != 0 {
+				return l.errorf("syntax error: unclosed paren")
+			}
+			start := l.start
+			if l.nextTerm() == "by" {
+				l.start = start
+				return lexOrderBy
+			}
+			return l.errorf("syntax error: ")
 		} else {
 			return l.errorf("syntax error: ")
 		}
@@ -375,8 +383,16 @@ func lexLogic(l *lexer) stateFunc {
 	case r == 'g':
 		l.backup()
 		// TODO : pos not correct
-		if l.nextTerm()+l.nextTerm() == KeyGroupBy {
-			return lexGroupBy
+		if l.nextTerm() == "group" {
+			if l.parenDepth != 0 {
+				return l.errorf("syntax error: unclosed paren")
+			}
+			start := l.start
+			if l.nextTerm() == "by" {
+				l.start = start
+				return lexGroupBy
+			}
+			return l.errorf("syntax error: ")
 		} else {
 			return l.errorf("syntax error: ")
 		}
@@ -387,9 +403,61 @@ func lexLogic(l *lexer) stateFunc {
 }
 
 func lexGroupBy(l *lexer) stateFunc {
-	return nil
+	l.emit(itemGroupBy)
+	for {
+		if s, ok := l.nextTermWithDot(); s != "" && ok {
+			if agg, ok := Aggragation[s]; ok {
+				l.emit(agg)
+				l.skipSpace()
+				if !l.accept(MarkLeftParen) {
+					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+				}
+				l.emit(itemLeftParen)
+				if aggField, ok := l.nextTermWithDot(); aggField != "" && ok {
+					l.emit(itemIdentifier)
+					l.skipSpace()
+					if !l.accept(MarkRightParen) {
+						return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+					}
+					l.emit(itemRightParen)
+					l.skipSpace()
+					if !l.accept(MakrComma) {
+						break
+					} else {
+						l.emit(itemComma)
+					}
+				} else {
+					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+				}
+			} else {
+				l.emit(itemIdentifier)
+				l.skipSpace()
+				if !l.accept(MakrComma) {
+					break
+				} else {
+					l.emit(itemComma)
+				}
+			}
+		} else {
+			return l.errorf("syntax error: query field %q not valid", l.input[l.pos:])
+		}
+	}
+	n := l.nextTerm()
+	if n == "" {
+		return nil
+	}
+	if n == "order" {
+		start := l.start
+		if l.nextTerm() == "by" {
+			l.start = start
+			return lexOrderBy
+		}
+		return l.errorf("syntax error: ")
+	}
+	return l.errorf("syntax error: ")
 }
 
 func lexOrderBy(l *lexer) stateFunc {
+	l.emit(itemOrderBy)
 	return nil
 }
