@@ -445,9 +445,6 @@ func lexGroupBy(l *lexer) stateFunc {
 		}
 	}
 	n := l.nextTerm()
-	if n == "" {
-		return nil
-	}
 	if n == "order" {
 		start := l.start
 		if l.nextTerm() == "by" {
@@ -456,10 +453,72 @@ func lexGroupBy(l *lexer) stateFunc {
 		}
 		return l.errorf("syntax error: ")
 	}
-	return l.errorf("syntax error: ")
+	return lexCheckEnd
 }
 
 func lexOrderBy(l *lexer) stateFunc {
 	l.emit(itemOrderBy)
-	return nil
+	for {
+		if s, ok := l.nextTermWithDot(); s != "" && ok {
+			if agg, ok := Aggragation[s]; ok {
+				l.emit(agg)
+				l.skipSpace()
+				if !l.accept(MarkLeftParen) {
+					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+				}
+				l.emit(itemLeftParen)
+				if aggField, ok := l.nextTermWithDot(); aggField != "" && ok {
+					l.emit(itemIdentifier)
+					l.skipSpace()
+					if !l.accept(MarkRightParen) {
+						return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+					}
+					l.emit(itemRightParen)
+					l.skipSpace()
+					if !l.accept(MakrComma) {
+						break
+					} else {
+						l.emit(itemComma)
+					}
+				} else {
+					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
+				}
+			} else {
+				l.emit(itemIdentifier)
+				l.skipSpace()
+				if !l.accept(MakrComma) {
+					break
+				} else {
+					l.emit(itemComma)
+				}
+			}
+		} else {
+			return l.errorf("syntax error: query field %q not valid", l.input[l.pos:])
+		}
+	}
+	n := l.nextTerm()
+	if n == KeyDesc {
+		return lexDesc
+	} else if n == KeyAsc {
+		return lexAsc
+	}
+	return lexCheckEnd
+}
+
+func lexDesc(l *lexer) stateFunc {
+	l.emit(itemDesc)
+	return lexCheckEnd
+}
+
+func lexAsc(l *lexer) stateFunc {
+	l.emit(itemAsc)
+	return lexCheckEnd
+}
+
+func lexCheckEnd(l *lexer) stateFunc {
+	l.skipSpace()
+	if l.pos >= len(l.input) {
+		return nil
+	}
+	return l.errorf("syntax error: end with %q", l.input[l.pos:])
 }
