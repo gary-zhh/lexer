@@ -141,6 +141,7 @@ func lexField(l *lexer) stateFunc {
 					return l.errorf("syntax error: aggragation error, %q", l.input[l.pos:])
 				}
 				l.emit(itemLeftParen)
+				// TODO: take count(*) into consideration
 				if aggField, ok := l.nextTermWithDot(); aggField != "" && ok {
 					l.emit(itemIdentifier)
 					l.skipSpace()
