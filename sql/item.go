@@ -99,7 +99,7 @@ const (
 )
 
 var (
-	Aggragation = map[string]itemType{
+	AggragationToType = map[string]itemType{
 		KeyCount:    itemCount,
 		KeyMax:      itemMax,
 		KeyMin:      itemMin,

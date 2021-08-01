@@ -27,6 +27,20 @@ func lex(name, input string) *lexer {
 	go l.run()
 	return l
 }
+
+// nextItem returns the next item from the input.
+// Called by the parser, not in the lexing goroutine.
+func (l *lexer) nextItem() item {
+	return <-l.items
+}
+
+// drain drains the output so the lexing goroutine will exit.
+// Called by the parser, not in the lexing goroutine.
+func (l *lexer) drain() {
+	for range l.items {
+	}
+}
+
 func (l *lexer) run() {
 	for state := lexStart; state != nil; {
 		state = state(l)
@@ -134,7 +148,7 @@ func lexField(l *lexer) stateFunc {
 	l.skipSpace()
 	for {
 		if s, ok := l.nextTermWithDot(); s != "" && ok {
-			if agg, ok := Aggragation[s]; ok {
+			if agg, ok := AggragationToType[s]; ok {
 				l.emit(agg)
 				l.skipSpace()
 				if !l.accept(MarkLeftParen) {
@@ -408,7 +422,7 @@ func lexGroupBy(l *lexer) stateFunc {
 	l.emit(itemGroupBy)
 	for {
 		if s, ok := l.nextTermWithDot(); s != "" && ok {
-			if agg, ok := Aggragation[s]; ok {
+			if agg, ok := AggragationToType[s]; ok {
 				l.emit(agg)
 				l.skipSpace()
 				if !l.accept(MarkLeftParen) {
@@ -460,7 +474,7 @@ func lexOrderBy(l *lexer) stateFunc {
 	l.emit(itemOrderBy)
 	for {
 		if s, ok := l.nextTermWithDot(); s != "" && ok {
-			if agg, ok := Aggragation[s]; ok {
+			if agg, ok := AggragationToType[s]; ok {
 				l.emit(agg)
 				l.skipSpace()
 				if !l.accept(MarkLeftParen) {
@@ -518,6 +532,7 @@ func lexAsc(l *lexer) stateFunc {
 func lexCheckEnd(l *lexer) stateFunc {
 	l.skipSpace()
 	if l.pos >= len(l.input) {
+		l.emit(itemEOF)
 		return nil
 	}
 	return l.errorf("syntax error: end with %q", l.input[l.pos:])
