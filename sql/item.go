@@ -47,6 +47,8 @@ const (
 	itemAnd // and
 	itemOr  // or
 	itemNot // not
+
+	itemAggragation // used only to delimit the aggragation
 	itemCount
 	itemAverage
 	itemMax
@@ -90,6 +92,8 @@ const (
 	KeyDesc     = "desc"
 	KeyAsc      = "asc"
 	KeyLimit    = "limit"
+	KeyTrue     = "true"
+	KeyFalse    = "false"
 	Space       = " "
 
 	MakrComma      = ","

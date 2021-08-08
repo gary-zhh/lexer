@@ -188,13 +188,17 @@ func lexField(l *lexer) stateFunc {
 			return l.errorf("syntax error: query field %q not valid", l.input[l.pos:])
 		}
 	}
-	if l.peekTerm() == KeyFrom {
+	switch l.peekTerm() {
+	case KeyFrom:
 		return lexFrom
-	}
-	if l.peekTerm() == KeyWhere {
+	case KeyWhere:
 		return lexWhere
+	case KeyGroupBy:
+		return lexGroupBy
+	case KeyOrderBy:
+		return lexOrderBy
 	}
-	return nil
+	return lexCheckEnd
 }
 
 func lexFrom(l *lexer) stateFunc {
@@ -202,13 +206,15 @@ func lexFrom(l *lexer) stateFunc {
 	l.emit(itemFrom)
 	if table := l.nextTerm(); table != "" {
 		l.emit(itemIdentifier)
-		if l.peekTerm() == KeyWhere {
+		switch l.peekTerm() {
+		case KeyWhere:
 			return lexWhere
-		} else if l.peek() == eof {
-			return nil
-		} else {
-			return l.errorf("syntax error: %q", l.input[l.start:l.pos])
+		case KeyGroupBy:
+			return lexGroupBy
+		case KeyOrderBy:
+			return lexOrderBy
 		}
+		return lexCheckEnd
 	} else {
 		return l.errorf("syntax error: table name %q not valid", l.input[l.start:l.pos])
 	}
@@ -351,8 +357,13 @@ func lexRightHandSide(l *lexer) stateFunc {
 		l.emit(itemNumber)
 	case unicode.IsLetter(r):
 		l.backup()
-		l.nextTermWithDot()
-		l.emit(itemIdentifier)
+		s, _ := l.nextTermWithDot()
+		if s == KeyTrue || s == KeyFalse {
+			l.emit(itemBool)
+		} else {
+			l.emit(itemIdentifier)
+		}
+
 	default:
 		return l.errorf("syntax error: condition")
 	}

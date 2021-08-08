@@ -15,7 +15,18 @@ const (
 	AggDistinct
 )
 
+var (
+	itemType2AggType = map[itemType]AggType{
+		itemCount:    AggCount,
+		itemSum:      AggSum,
+		itemAverage:  AggAverage,
+		itemMin:      AggMin,
+		itemMax:      AggMax,
+		itemDistinct: AggDistinct,
+	}
+)
+
 type aggItem struct {
-	Field string
 	Agg   AggType
+	Field string
 }
